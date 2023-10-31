@@ -2,12 +2,14 @@ package io.github.edsonsfreitas.msuser.services.user.impl;
 
 import io.github.edsonsfreitas.msuser.dtos.user.UserRecordPageResponseDTO;
 import io.github.edsonsfreitas.msuser.models.user.UserModel;
+import io.github.edsonsfreitas.msuser.producers.UserProducer;
 import io.github.edsonsfreitas.msuser.repository.user.UserRepository;
 import io.github.edsonsfreitas.msuser.services.user.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,13 +23,16 @@ import java.util.UUID;
  */
 
 @Service
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final UserProducer userProducer;
 
 
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository, UserProducer userProducer) {
         this.userRepository = userRepository;
+        this.userProducer = userProducer;
     }
 
 
@@ -53,9 +58,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserModel saveUser(UserModel userToSave) {
         userToSave.setCreatedAt(LocalDateTime.now());
         final UserModel userModel = userRepository.save(userToSave);
+        userProducer.publishMessageEmail(userModel);
         return userModel;
     }
 }
